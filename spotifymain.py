@@ -1,46 +1,99 @@
+import time
+import requests
 import spotipy
-import spotipy.oauth2 as oauth2
 from spotipy.oauth2 import SpotifyOAuth
-from spotipy.oauth2 import SpotifyClientCredentials
-import streamlit
-import credentials
-import spotipy.oauth2 as oauth2
-import spotipy
+from flask import Flask, request
+import pandas as pd
 
-authManager = SpotifyClientCredentials(client_id=credentials.CLIENT_ID, client_secret=credentials.CLIENT_SECRET, )
-sp = spotipy.Spotify(auth_manager=authManager)
+song_acousticness = 0
+song_danceability = 0
+song_energy = 0
+song_instrumentalness = 0
+song_liveness = 0
+song_loudness = 0
+song_speechiness = 0
+song_valence = 0
+song_tempo = 0
 
-def getTracks(trackName):
-    results = sp.search(q=trackName, type='track')
-    trackUri = results['tracks']['items'][0]['uri']
-    return trackUri
+client_id = "6a6c425d0b424157b0003b7ccfc4fab4"
+client_secret = "9fe61604885d4cfdb89e4fc4488b1f59"
+redirect_uri = "http://127.0.0.1:9090/callback"
+scope = "user-top-read"
 
-def getRecommendations(songTracks):
-    recommendations = sp.recommendations(limit=3,seed_tracks=songTracks)['tracks']
-    return recommendations
-
-
-streamlit.title("Music Recommendation System")
-trackName1 = streamlit.text_input("Enter a song name:")
-trackName2 = streamlit.text_input("Enter the second song name:")
-trackName3 = streamlit.text_input("Enter the third song name:")
-combineTracks = []
-if trackName1:
-    tracks1 = getTracks(trackName1)
-    combineTracks.append(tracks1)
-
-if trackName2:
-    tracks2 = getTracks(trackName2)
-    combineTracks.append(tracks2)
-
-if trackName3:
-    tracks3 = getTracks(trackName3)
-    combineTracks.append(tracks3)
+sp_oauth = SpotifyOAuth(redirect_uri=redirect_uri, client_id=client_id,
+                        client_secret=client_secret, scope=scope)
+auth_url = sp_oauth.get_authorize_url()
+app = Flask(__name__)
+@app.route("/")
+def hello_world():
+    return f'<a href="{auth_url}">login to spotify!</a>'
 
 
-if len(combineTracks) == 3:
-    recommendation = getRecommendations(combineTracks)
-    streamlit.write("Recommended songs")
-    for track in recommendation:
-        streamlit.write(track['name'])
-        streamlit.image(track['album']['images'][0]['url'])
+@app.route('/callback')
+def callback():
+    tracklist = []
+    authorization_code = request.args.get('code')
+    if authorization_code:
+        # You have obtained the authorization code.
+        print("Authorization Code:", authorization_code)
+        access_token = sp_oauth.get_access_token(authorization_code)
+        print("Access Token:", access_token)
+        sp = spotipy.Spotify()
+        sp.set_auth(access_token['access_token'])
+
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+                     client_id=client_id,
+                     client_secret=client_secret,
+                     redirect_uri=redirect_uri,
+                     scope=scope))
+
+top_tracks_list = sp.current_user_top_tracks(
+    limit=20,
+    offset=0,
+    time_range="medium_term")
+top_artists_list = sp.current_user_top_artists(
+    limit=10,
+    offset=0,
+    time_range="short_term"
+)
+
+def get_track_ids(time_frame):
+    track_ids = []
+    for song in time_frame['items']:
+        track_ids.append(song['id'])
+    return track_ids
+track_ids = get_track_ids(top_tracks_list)
+
+def get_track_features(id):
+    meta = sp.track(id)
+    name = meta['name']
+    album = meta['album']['name']
+    artist = meta['album']['artists'][0]['name']
+    result = sp.search(name)
+    track = result['tracks']['items'][0]
+    artists = sp.artist(track["artists"][0]["external_urls"]["spotify"])
+    track_info = [name, album, artist, artists['genres'][0], ]
+    print(track_info)
+
+tracks_list = []
+for i in range(len(track_ids)):
+    track = get_track_features(track_ids[i])
+    tracks_list.append(track)
+'''
+def get_track_aspects(time_frame):
+    track_features = []
+    for song in time_frame['items']:
+        track_features.append(song['id']) #id
+    return track_features
+track_features = get_track_aspects( )
+'''
+def get_track_analysis(id):
+    analysis = sp.audio_features(get_track_ids())
+    print(analysis)
+    # meta = sp.track(id)
+
+'''
+user_analysis = []
+for i in range(len(track_ids)):
+    track = get_track_analysis(track_features[i])
+    user_analysis.append(track)'''
