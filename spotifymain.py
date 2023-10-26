@@ -5,15 +5,6 @@ from spotipy.oauth2 import SpotifyOAuth
 from flask import Flask, request
 import pandas as pd
 
-song_acousticness = 0
-song_danceability = 0
-song_energy = 0
-song_instrumentalness = 0
-song_liveness = 0
-song_loudness = 0
-song_speechiness = 0
-song_valence = 0
-song_tempo = 0
 
 client_id = "6a6c425d0b424157b0003b7ccfc4fab4"
 client_secret = "9fe61604885d4cfdb89e4fc4488b1f59"
@@ -48,7 +39,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
                      scope=scope))
 
 top_tracks_list = sp.current_user_top_tracks(
-    limit=20,
+    limit=10,
     offset=0,
     time_range="medium_term")
 top_artists_list = sp.current_user_top_artists(
@@ -63,6 +54,7 @@ def get_track_ids(time_frame):
         track_ids.append(song['id'])
     return track_ids
 track_ids = get_track_ids(top_tracks_list)
+
 
 def get_track_features(id):
     meta = sp.track(id)
@@ -79,21 +71,33 @@ tracks_list = []
 for i in range(len(track_ids)):
     track = get_track_features(track_ids[i])
     tracks_list.append(track)
-'''
-def get_track_aspects(time_frame):
-    track_features = []
-    for song in time_frame['items']:
-        track_features.append(song['id']) #id
-    return track_features
-track_features = get_track_aspects( )
-'''
-def get_track_analysis(id):
-    analysis = sp.audio_features(get_track_ids())
-    print(analysis)
-    # meta = sp.track(id)
+# '''
+# def get_track_aspects(time_frame):
+#     track_features = []
+#     for song in time_frame['items']:
+#         track_features.append(song['id']) #id
+#     return track_features
+# track_features = get_track_aspects( )
+# '''
 
-'''
+def get_track_analysis(id):
+    meta = sp.audio_features(id)
+    song_acousticness = meta['acousticness']
+    song_danceability = m\['danceability']
+    list_analysis = [song_acousticness, song_danceability]
+    print(list_analysis)
+#     '''song_energy = 0
+#     song_instrumentalness = 0
+#     song_liveness = 0
+#     song_loudness = 0
+#     song_speechiness = 0
+#     song_valence = 0
+#     song_tempo = 0
+#     '''
+# ''''(sp.audio_features(get_track_ids(top_tracks_list)))
+# print(analysis)'''''
+
 user_analysis = []
 for i in range(len(track_ids)):
-    track = get_track_analysis(track_features[i])
-    user_analysis.append(track)'''
+    track = get_track_analysis(track_ids[i])
+    user_analysis.append(track)
